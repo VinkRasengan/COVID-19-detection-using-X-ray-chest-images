@@ -81,33 +81,46 @@ python quick_test.py
 
 ### 3. Chạy Application
 
-#### Option 1: Auto Launcher (Recommended)
+#### Backend (Flask API)
 ```bash
-python launch_multi_model.py
-```
-- 🚀 Tự động start Flask app
-- 🌐 Mở browser tabs
-- 📋 Hiển thị instructions
+# Kích hoạt virtual environment (nếu có)
+venv\Scripts\activate  # Windows
+source venv/bin/activate  # Linux/Mac
 
-#### Option 2: Manual Start
-```bash
+# Chạy Flask backend
 python app.py
 ```
-Sau đó mở browser:
-- **Multi-Model Interface**: http://localhost:5000/multi ⭐
+
+#### Frontend (React App)
+```bash
+# Chuyển vào thư mục frontend
+cd frontend
+
+# Cài đặt dependencies (chỉ lần đầu)
+npm install
+
+# Chạy React development server
+npm start
+```
+
+#### Truy cập ứng dụng:
+- **Frontend (React)**: http://localhost:3000 ⭐
+- **Backend API**: http://localhost:5000
+- **Multi-Model Interface**: http://localhost:5000/multi
 - **Basic Interface**: http://localhost:5000
 
 ## 🌐 Web Interfaces
 
-### 🎯 Multi-Model Interface (`/multi`) - **RECOMMENDED**
+### 🎯 React Frontend (`http://localhost:3000`) - **RECOMMENDED**
 
 **Giao diện chính với full features:**
 - 🧠 **Model Selector**: Chọn và switch giữa các AI models
 - 📊 **Model Comparison**: So sánh kết quả từ tất cả models
-- 🎨 **Modern UI**: Bootstrap 5 với responsive design
+- 🎨 **Modern UI**: React với Material-UI components
 - 📱 **Mobile-friendly**: Tương thích mọi thiết bị
 - 🖱️ **Drag & Drop**: Upload ảnh dễ dàng
 - 📈 **Visual Analytics**: Charts, progress bars, confidence indicators
+- ⚡ **Real-time**: Live updates và smooth interactions
 
 **Cách sử dụng:**
 1. **Chọn Model**: Click vào model button để switch
@@ -117,11 +130,10 @@ Sau đó mở browser:
    - "So sánh tất cả Models" - Multi-model comparison
 4. **View Results**: Detailed analysis với confidence scores
 
-### 📝 Basic Interface (`/`)
-- Simple upload form
-- Single model prediction
-- JSON response format
-- Good for API testing
+### 📝 Flask Templates (`http://localhost:5000`)
+- **Multi-Model Interface** (`/multi`): Bootstrap 5 interface
+- **Basic Interface** (`/`): Simple upload form
+- **API Testing**: JSON response format
 
 ## 📡 API Endpoints
 
@@ -234,7 +246,7 @@ covid19-xray-detection/
 ├── uploads/                        # Image uploads
 ├── requirements.txt               # Dependencies
 ├── simple_model_creator.py       # Create models
-├── launch_multi_model.py         # Auto launcher
+├── start_app.bat                 # Windows startup script
 ├── test_multi_model_api.py       # API testing
 └── README.md                     # This file
 ```
@@ -329,16 +341,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ```bash
 # 1. Install dependencies
-pip install tensorflow opencv-python flask flask-cors pillow numpy
+pip install -r requirements.txt
 
-# 2. Create models (if needed)
-python simple_model_creator.py
+# 2. Download models (if needed)
+python download_models.py
 
-# 3. Launch system
-python launch_multi_model.py
+# 3. Start backend
+python app.py
 
-# 4. Open browser
-# Multi-Model Interface: http://localhost:5000/multi
+# 4. Start frontend (in new terminal)
+cd frontend && npm install && npm start
+
+# 5. Open browser
+# Frontend: http://localhost:3000
+# Backend: http://localhost:5000
 ```
 
-**🩺 Ready to detect COVID-19 with AI! Try the Multi-Model interface for best experience.**
+**🩺 Ready to detect COVID-19 with AI! Try the React frontend for best experience.**
