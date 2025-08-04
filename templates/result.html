@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Result</title>
+    <style>
+        /* Căn giữa toàn bộ nội dung */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+
+        /* Đảm bảo tất cả các hình ảnh có cùng kích thước hiển thị */
+        .result-image {
+            max-width: 400px;
+            width: 100%;
+            height: auto;
+            margin: 20px 0;
+        }
+
+        /* Căn chỉnh danh sách xác suất */
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        /* Thiết kế form tải ảnh mới */
+        form {
+            margin-top: 20px;
+        }
+
+        /* Thiết kế nút và input */
+        input[type="file"] {
+            margin: 20px 0;
+            padding: 10px;
+        }
+
+        input[type="submit"] {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Prediction Result</h1>
+    <p><strong>Predicted Label:</strong> {{ label }}</p>
+    <img src="{{ url_for('display_image', filename=filename) }}" alt="Uploaded Image" class="result-image">
+
+    <h2>Prediction Probabilities:</h2>
+    <ul>
+        {% for class, prob in probabilities.items() %}
+        <li>{{ class }}: {{ prob * 100 }}%</li>
+        {% endfor %}
+    </ul>
+
+    <!-- Form để người dùng tải lên ảnh mới mà không cần quay lại -->
+    <form action="/predict" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept="image/*" required>
+        <br>
+        <input type="submit" value="Predict Another Image">
+    </form>
+</body>
+
+</html>

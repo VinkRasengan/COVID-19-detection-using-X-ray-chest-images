@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COVID-19 X-Ray Detection - Multi Model</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        
+        .main-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 1200px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        
+        .header h1 {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .model-selector {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        
+        .upload-area.dragover {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        
+        .result-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-left: 5px solid #007bff;
+        }
+        
+        .model-comparison {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .confidence-bar {
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #e9ecef;
+            margin: 5px 0;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .confidence-high { background: linear-gradient(90deg, #28a745, #20c997); }
+        .confidence-medium { background: linear-gradient(90deg, #ffc107, #fd7e14); }
+        .confidence-low { background: linear-gradient(90deg, #dc3545, #e74c3c); }
+        
+        .model-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin: 2px;
+        }
+        
+        .model-active { background: #007bff; color: white; }
+        .model-available { background: #6c757d; color: white; }
+        
+        .prediction-result {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .covid-positive { color: #dc3545; }
+        .covid-negative { color: #28a745; }
+        .pneumonia { color: #ffc107; }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .btn-group .btn {
+            margin: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-container">
+            <!-- Header -->
+            <div class="header">
+                <h1><i class="fas fa-lungs"></i> COVID-19 X-Ray Detection</h1>
+                <p class="lead">Hệ thống phát hiện COVID-19 từ ảnh X-ray ngực sử dụng AI đa mô hình</p>
+            </div>
+            
+            <!-- Model Selector -->
+            <div class="model-selector">
+                <h4><i class="fas fa-brain"></i> Chọn Model AI</h4>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div id="modelList" class="btn-group flex-wrap" role="group">
+                            <!-- Models will be loaded here -->
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-info w-100" onclick="compareAllModels()">
+                            <i class="fas fa-chart-bar"></i> So sánh tất cả Models
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <span id="currentModel">Đang load models...</span>
+                    </small>
+                </div>
+            </div>
+            
+            <!-- Upload Area -->
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                <h4>Tải lên ảnh X-ray</h4>
+                <p class="text-muted">Kéo thả ảnh vào đây hoặc click để chọn file</p>
+                <small class="text-muted">Hỗ trợ: PNG, JPG, JPEG</small>
+                <input type="file" id="fileInput" class="d-none" accept="image/*" onchange="handleFileSelect(event)">
+            </div>
+            
+            <!-- Image Preview -->
+            <div id="imagePreview" class="text-center d-none">
+                <img id="previewImg" class="image-preview" alt="Preview">
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="predictWithCurrentModel()">
+                        <i class="fas fa-search"></i> Phân tích với Model hiện tại
+                    </button>
+                    <button class="btn btn-success ms-2" onclick="compareAllModels()">
+                        <i class="fas fa-chart-bar"></i> So sánh tất cả Models
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Loading -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Đang phân tích ảnh...</p>
+            </div>
+            
+            <!-- Single Result -->
+            <div id="singleResult" class="d-none">
+                <!-- Single result will be displayed here -->
+            </div>
+            
+            <!-- Model Comparison Results -->
+            <div id="comparisonResults" class="d-none">
+                <div class="model-comparison">
+                    <h4><i class="fas fa-chart-line"></i> Kết quả so sánh Models</h4>
+                    <div id="comparisonContent">
+                        <!-- Comparison results will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let availableModels = [];
+        let currentModelName = '';
+        let currentFile = null;
+        
+        // Load available models when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAvailableModels();
+            setupDragAndDrop();
+        });
+        
+        // Load available models from backend
+        async function loadAvailableModels() {
+            try {
+                const response = await fetch('/models');
+                const data = await response.json();
+                
+                if (data.success) {
+                    availableModels = data.models;
+                    currentModelName = data.current_model;
+                    renderModelList();
+                    updateCurrentModelDisplay();
+                }
+            } catch (error) {
+                console.error('Error loading models:', error);
+                document.getElementById('currentModel').textContent = 'Lỗi load models';
+            }
+        }
+        
+        // Render model list
+        function renderModelList() {
+            const modelList = document.getElementById('modelList');
+            modelList.innerHTML = '';
+            
+            availableModels.forEach(model => {
+                const btn = document.createElement('button');
+                btn.className = `btn ${model.is_current ? 'btn-primary' : 'btn-outline-secondary'} model-btn`;
+                btn.onclick = () => switchModel(model.name);
+                btn.innerHTML = `
+                    <i class="fas fa-brain"></i> ${model.name}
+                    ${model.is_current ? '<i class="fas fa-check ms-1"></i>' : ''}
+                `;
+                btn.title = model.description;
+                modelList.appendChild(btn);
+            });
+        }
+        
+        // Update current model display
+        function updateCurrentModelDisplay() {
+            const currentModel = availableModels.find(m => m.name === currentModelName);
+            if (currentModel) {
+                document.getElementById('currentModel').innerHTML = `
+                    <strong>Model hiện tại:</strong> ${currentModel.name}<br>
+                    <small>${currentModel.description}</small>
+                `;
+            }
+        }
+        
+        // Switch model
+        async function switchModel(modelName) {
+            try {
+                const response = await fetch('/switch_model', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_name: modelName })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    currentModelName = modelName;
+                    // Update model list display
+                    availableModels.forEach(m => m.is_current = m.name === modelName);
+                    renderModelList();
+                    updateCurrentModelDisplay();
+                    
+                    // Show success message
+                    showToast(`Đã chuyển sang ${modelName}`, 'success');
+                }
+            } catch (error) {
+                console.error('Error switching model:', error);
+                showToast('Lỗi chuyển model', 'error');
+            }
+        }
+        
+        // Setup drag and drop
+        function setupDragAndDrop() {
+            const uploadArea = document.querySelector('.upload-area');
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+        }
+        
+        // Handle file select
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+        
+        // Handle file
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('Vui lòng chọn file ảnh', 'error');
+                return;
+            }
+            
+            currentFile = file;
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('previewImg').src = e.target.result;
+                document.getElementById('imagePreview').classList.remove('d-none');
+                document.getElementById('singleResult').classList.add('d-none');
+                document.getElementById('comparisonResults').classList.add('d-none');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Predict with current model
+        async function predictWithCurrentModel() {
+            if (!currentFile) {
+                showToast('Vui lòng chọn ảnh trước', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            hideResults();
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', currentFile);
+                
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                showLoading(false);
+                
+                if (data.success) {
+                    displaySingleResult(data);
+                } else {
+                    showToast(data.error || 'Lỗi prediction', 'error');
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Error:', error);
+                showToast('Lỗi kết nối', 'error');
+            }
+        }
+        
+        // Compare all models
+        async function compareAllModels() {
+            if (!currentFile) {
+                showToast('Vui lòng chọn ảnh trước', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            hideResults();
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', currentFile);
+                
+                const response = await fetch('/compare_models', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                showLoading(false);
+                
+                if (data.success) {
+                    displayComparisonResults(data);
+                } else {
+                    showToast(data.error || 'Lỗi comparison', 'error');
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Error:', error);
+                showToast('Lỗi kết nối', 'error');
+            }
+        }
+        
+        // Display single result
+        function displaySingleResult(data) {
+            const resultDiv = document.getElementById('singleResult');
+            const predictionClass = getPredictionClass(data.label);
+            const confidenceClass = getConfidenceClass(data.confidence);
+            
+            resultDiv.innerHTML = `
+                <div class="result-card">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h4><i class="fas fa-diagnoses"></i> Kết quả phân tích</h4>
+                            <div class="prediction-result ${predictionClass}">
+                                ${data.label}
+                            </div>
+                            <div class="mb-3">
+                                <strong>Độ tin cậy:</strong> ${data.confidence_level} (${(data.confidence * 100).toFixed(1)}%)
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill ${confidenceClass}" style="width: ${data.confidence * 100}%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Khuyến nghị:</strong> ${data.recommendation.message}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><i class="fas fa-brain"></i> Model sử dụng</h6>
+                            <div class="model-badge model-active">${data.model_info.name}</div>
+                            <p class="small text-muted mt-2">${data.model_info.description}</p>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-3"><i class="fas fa-chart-pie"></i> Chi tiết xác suất</h6>
+                    ${Object.entries(data.probabilities).map(([label, prob]) => `
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>${label}</span>
+                                <span>${(prob * 100).toFixed(1)}%</span>
+                            </div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill ${getProbabilityClass(prob)}" style="width: ${prob * 100}%"></div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            resultDiv.classList.remove('d-none');
+        }
+        
+        // Display comparison results
+        function displayComparisonResults(data) {
+            const contentDiv = document.getElementById('comparisonContent');
+            
+            contentDiv.innerHTML = Object.entries(data.results).map(([modelName, result]) => {
+                if (result.error) {
+                    return `
+                        <div class="alert alert-danger">
+                            <strong>${modelName}:</strong> ${result.error}
+                        </div>
+                    `;
+                }
+                
+                const predictionClass = getPredictionClass(result.label);
+                const confidenceClass = getConfidenceClass(result.confidence);
+                
+                return `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <h6 class="card-title">${modelName}</h6>
+                                    <small class="text-muted">${result.model_info.description}</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong class="${predictionClass}">${result.label}</strong>
+                                    <br><small>${result.confidence_level} (${(result.confidence * 100).toFixed(1)}%)</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="confidence-bar">
+                                        <div class="confidence-fill ${confidenceClass}" style="width: ${result.confidence * 100}%"></div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        ${Object.entries(result.probabilities).map(([label, prob]) => `
+                                            <div class="col-4">
+                                                <small>${label}: ${(prob * 100).toFixed(0)}%</small>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('comparisonResults').classList.remove('d-none');
+        }
+        
+        // Helper functions
+        function getPredictionClass(label) {
+            if (label === 'COVID-19') return 'covid-positive';
+            if (label === 'Normal') return 'covid-negative';
+            if (label === 'Pneumonia') return 'pneumonia';
+            return '';
+        }
+        
+        function getConfidenceClass(confidence) {
+            if (confidence > 0.7) return 'confidence-high';
+            if (confidence > 0.5) return 'confidence-medium';
+            return 'confidence-low';
+        }
+        
+        function getProbabilityClass(prob) {
+            if (prob > 0.7) return 'confidence-high';
+            if (prob > 0.3) return 'confidence-medium';
+            return 'confidence-low';
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        function hideResults() {
+            document.getElementById('singleResult').classList.add('d-none');
+            document.getElementById('comparisonResults').classList.add('d-none');
+        }
+        
+        function showToast(message, type) {
+            // Simple toast implementation
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
